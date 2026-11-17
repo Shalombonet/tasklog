@@ -1,0 +1,28 @@
+<!-- This page lets a new user create a Tasklog account. -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create account · Tasklog</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <script src="app.js" defer></script>
+</head>
+<body class="auth">
+  <main class="auth-card">
+    <div class="auth-brand"><span class="brand-mark">T</span><span>Tasklog</span></div>
+    <h1>Create your account</h1>
+    <p class="muted">A little clarity for everything on your plate.</p>
+    <form id="auth-form" data-auth-mode="register">
+      <label>Name<input name="name" type="text" autocomplete="name" maxlength="100" required></label>
+      <label>Email<input name="email" type="email" autocomplete="email" placeholder="you@example.com" required></label>
+      <label>Password<span class="password-input-wrap"><input id="register-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="16" required><button class="password-toggle" type="button" data-password-toggle="register-password" aria-label="Show password" aria-pressed="false">Show</button></span><small class="password-hint">8–16 characters, with a letter, a number, and a special character.</small></label>
+      <p class="auth-error" id="auth-error" role="alert" hidden></p>
+      <button class="btn primary" type="submit">Create account</button>
+    </form>
+    <p class="muted auth-switch">Already have an account? <a href="login.html">Log in</a></p>
+  </main>
+</body>
+</html>

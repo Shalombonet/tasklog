@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+  <!-- This page contains the Tasklog workspace and project controls. -->
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>My tasks · Tasklog</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app-loading" id="app-loading" role="status">
+      <div class="loading-skeleton loading-skeleton-title"></div>
+      <div class="loading-skeleton-grid"><i class="loading-skeleton"></i><i class="loading-skeleton"></i><i class="loading-skeleton"></i></div>
+      <span>Checking your session…</span>
+    </div>
+    <div class="app" id="app-shell" hidden>
+      <header class="app-header">
+        <button type="button" class="mobile-menu-button" id="sidebar-toggle" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false">Menu</button>
+        <a class="brand" href="#board" aria-label="Tasklog home">Tasklog</a>
+        <label class="search-wrap">
+          <input type="search" id="search" placeholder="Search tasks" aria-label="Search tasks" />
+        </label>
+        <div class="app-header-actions">
+          <div class="notification-wrap" id="notification-wrap">
+            <button type="button" class="notification-button" id="notification-toggle" aria-label="Notifications" title="Notifications" aria-expanded="false" aria-controls="notification-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg><span class="notification-badge" id="notification-count" hidden>0</span></button>
+            <section class="notification-menu" id="notification-menu" aria-label="Notifications" hidden>
+              <header><h2>Notifications</h2><button type="button" class="text-button" id="notifications-refresh">Refresh</button></header>
+              <p class="notification-state" id="notification-state" role="status">Loading reminders…</p>
+              <p class="notification-error" id="notification-error" role="alert" hidden></p>
+              <div class="notification-list" id="notification-list"></div>
+            </section>
+          </div>
+          <div class="user-menu-wrap" id="user-menu-wrap">
+            <button type="button" class="avatar-button" id="user-menu-toggle" aria-label="Open account menu" title="Account" aria-expanded="false" aria-controls="user-menu"><span class="avatar" id="user-avatar">U</span></button>
+            <section class="user-menu" id="user-menu" aria-label="Account menu" hidden>
+              <div class="user-menu-identity"><strong id="user-name">Tasklog user</strong><span id="user-email">Account email</span></div>
+              <div class="user-menu-divider"></div>
+              <button type="button" data-view="profile">Profile</button>
+              <button type="button" data-view="settings">Settings</button>
+              <div class="user-menu-divider"></div>
+              <a href="login.html" id="logout-link">Log out</a>
+            </section>
+          </div>
+        </div>
+      </header>
+      <aside class="sidebar" id="sidebar">
+        <nav class="sidebar-nav" aria-label="Main navigation">
+          <p class="sidebar-label">Menu</p>
+          <a href="#board" class="nav-link active" data-view="board"><span>My tasks</span><span class="nav-badge" id="open-task-count">0</span></a>
+          <a href="#dashboard" class="nav-link" data-view="dashboard"><span>Dashboard</span></a>
+          <a href="#reports" class="nav-link" data-view="reports"><span>Reports</span></a>
+          <a href="#calendar" class="nav-link" data-view="calendar"><span>Calendar</span></a>
+          <a href="#settings" class="nav-link" data-view="settings"><span>Settings</span></a>
+          <div class="sidebar-section-head"><p class="sidebar-label">Projects</p><button type="button" class="sidebar-add" id="new-project" aria-label="Create a project" title="New project">+</button></div>
+          <button type="button" class="project-select inbox-select" data-project-select="inbox"><span class="project-dot inbox-dot"></span><span class="project-name">Inbox</span><span class="project-count" id="inbox-task-count">0</span></button>
+          <div class="project-list" id="project-list"></div>
+          <button class="new-project-link" id="new-project-link" type="button"><span>＋</span> New project</button>
+        </nav>
+        <div class="sidebar-footer"><a href="login.html" id="sidebar-logout-link">Log out</a></div>
+      </aside>
+      <button type="button" class="sidebar-backdrop" id="sidebar-backdrop" aria-label="Close navigation" hidden></button>
+      <main class="main">
+        <header class="topbar">
+          <div class="topbar-heading">
+            <h1 id="page-title">My tasks</h1>
+            <p class="page-subtitle" id="page-subtitle">A clear place to plan and finish your work.</p>
+          </div>
+          <button class="btn primary" id="create-task">Create task</button>
+        </header>
+        <div class="toolbar">
+          <select id="filter-status" aria-label="Filter by status">
+            <option value="">All statuses</option>
+            <option value="pending">To do</option>
+            <option value="in_progress">In progress</option>
+            <option value="completed">Completed</option>
+          </select>
+          <select id="filter-priority" aria-label="Filter by priority">
+            <option value="">All priorities</option>
+            <option value="high">High priority</option>
+            <option value="medium">Medium priority</option>
+            <option value="low">Low priority</option>
+          </select>
+        </div>
+        <div class="app-message" id="app-message" role="status" hidden></div>
+        <section class="board" aria-label="Task board">
+          <section class="column" data-status="pending">
+            <header class="column-head">
+              <div>
+                <h2>To do</h2>
+                <span id="count-pending" class="count">0</span>
+              </div>
+              <button
+                class="add-column"
+                data-create-status="pending"
+                aria-label="Add task to do"
+              >
+                +
+              </button>
+            </header>
+            <p class="column-hint">Not started yet</p>
+            <div class="task-list" id="list-pending"></div>
+          </section>
+          <section class="column" data-status="in_progress">
+            <header class="column-head">
+              <div>
+                <h2>In progress</h2>
+                <span id="count-in_progress" class="count">0</span>
+              </div>
+              <button
+                class="add-column"
+                data-create-status="pending"
+                aria-label="Create a task"
+              >
+                +
+              </button>
+            </header>
+            <p class="column-hint">Work has started</p>
+            <div class="task-list" id="list-in_progress"></div>
+          </section>
+          <section class="column" data-status="completed">
+            <header class="column-head">
+              <div>
+                <h2>Completed</h2>
+                <span id="count-completed" class="count">0</span>
+              </div>
+            </header>
+            <p class="column-hint">Finished tasks</p>
+            <div class="task-list" id="list-completed"></div>
+          </section>
+        </section>
+        <section
+          class="dashboard"
+          id="dashboard-view"
+          aria-label="Task dashboard"
+          hidden
+        >
+
+          <p class="dashboard-request-state" id="summary-state" role="status">Loading your task summary…</p>
+          <p class="dashboard-error" id="summary-error" role="alert" hidden></p>
+          <div class="stat-grid">
+            <article class="stat-card">
+              <span>Total tasks</span><strong id="stat-total">—</strong>
+              <small>Across your workspace</small>
+            </article>
+            <article class="stat-card">
+              <span>In progress</span><strong id="stat-progress">—</strong>
+              <small>Tasks you have started</small>
+            </article>
+            <article class="stat-card">
+              <span>Completed</span><strong id="stat-completed">—</strong>
+              <small>Tasks marked complete</small>
+            </article>
+            <article class="stat-card attention">
+              <span>Overdue</span><strong id="stat-overdue">—</strong>
+              <small>Unfinished past due date</small>
+            </article>
+          </div>
+          <div class="dashboard-highlight-grid">
+            <article class="dashboard-highlight"><span>Due today</span><strong id="stat-due-today">—</strong><small>Tasks due before day end</small></article>
+            <article class="dashboard-highlight"><span>Due this week</span><strong id="stat-due-week">—</strong><small>Tasks due in the next few days</small></article>
+            <article class="dashboard-highlight"><span>Completed this week</span><strong id="stat-completed-week">—</strong><small>Tasks finished this week</small></article>
+          </div>
+          <div class="dashboard-grid dashboard-main-grid">
+            <section class="dashboard-card dashboard-activity-card">
+              <header><div><h3>Activity</h3><span>Last 14 days</span></div>
+                <div class="activity-legend" aria-label="Activity legend"><span><i class="legend-steps"></i>Steps</span><span><i class="legend-tasks"></i>Tasks</span><span><i class="legend-notes"></i>Notes</span></div>
+              </header>
+              <p class="dashboard-request-state" id="activity-state" role="status">Loading activity…</p>
+              <p class="dashboard-error" id="activity-error" role="alert" hidden></p>
+              <p class="dashboard-empty" id="activity-empty" hidden>No activity yet. Complete a step to see your activity.</p>
+              <div class="activity-chart-wrap" id="activity-chart-wrap" hidden></div>
+            </section>
+            <details class="dashboard-more-insights"><summary>More insights <span>Completion rate and streak</span></summary><div class="dashboard-side-grid">
+              <section class="dashboard-card completion-card">
+                <header><div><h3>Completion rate</h3><span>Completed tasks</span></div></header>
+                <p class="dashboard-error" id="completion-error" role="alert" hidden></p>
+                <div class="completion-ring" id="completion-ring" role="img" aria-label="Completion rate loading"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="completion-track" cx="60" cy="60" r="49"></circle><circle class="completion-progress" id="completion-progress" cx="60" cy="60" r="49"></circle></svg><span id="completion-rate">—</span></div>
+                <p class="dashboard-request-state" id="completion-note" role="status">Loading completion rate…</p>
+              </section>
+              <section class="dashboard-card streak-card">
+                <header><div><h3>Current streak</h3><span>Consecutive active days</span></div></header>
+                <p class="dashboard-request-state" id="streak-state" role="status">Loading your streak…</p>
+                <p class="dashboard-error" id="streak-error" role="alert" hidden></p>
+                <p class="streak-value"><strong id="streak-days">—</strong><span>days</span></p>
+                <p class="muted" id="streak-note">Complete a task or step to build a streak.</p>
+              </section>
+            </div>
+            </details>
+            <section class="dashboard-card due-soon-card">
+              <header><div><h3>Due soon</h3><span>Next 5 tasks by due date</span></div></header>
+              <div id="due-soon-list" class="dashboard-task-list"></div>
+            </section>
+          </div>
+        </section>
+        <section class="reports-view" id="reports-view" aria-label="Task reports" hidden>
+          <div class="reports-heading"><div><p class="eyebrow">YOUR WORKSPACE</p><p class="muted">A printable record of activity and completed work.</p></div><button type="button" class="btn" id="print-report">Print / Save as PDF</button></div>
+          <section class="report-card report-activity">
+            <header class="report-card-heading"><div><h2>Activity</h2><p class="muted">Daily steps, completed tasks, and notes.</p></div><label class="report-range">Date range<select id="report-days" aria-label="Report date range"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option></select></label></header>
+            <p class="report-state" id="report-activity-state" role="status">Loading activity…</p><p class="report-error" id="report-activity-error" role="alert" hidden></p><p class="report-empty" id="report-activity-empty" hidden>No activity in this date range yet.</p><div class="report-chart-wrap" id="report-activity-chart" hidden></div>
+          </section>
+          <div class="reports-grid">
+            <section class="report-card"><header class="report-card-heading"><div><h2>By project</h2><p class="muted">Tasks completed and still open.</p></div></header><p class="report-state" id="report-project-state" role="status">Loading projects…</p><p class="report-error" id="report-project-error" role="alert" hidden></p><table class="data-table report-table"><thead><tr><th>Project</th><th>Completed</th><th>Open</th></tr></thead><tbody id="report-project-list" hidden></tbody></table></section>
+            <section class="report-card"><header class="report-card-heading"><div><h2>Proof of work</h2><p class="muted">Completed steps and notes, newest first.</p></div></header><p class="report-state" id="report-proof-state" role="status">Loading your work history…</p><p class="report-error" id="report-proof-error" role="alert" hidden></p><p class="report-empty" id="report-proof-empty" hidden>No completed steps or notes yet.</p><table class="data-table report-table"><thead><tr><th>Work item</th><th>Task</th><th>Type</th><th>When</th></tr></thead><tbody id="report-proof-list" hidden></tbody></table></section>
+          </div>
+        </section>
+        <section class="calendar-view" id="calendar-view" aria-label="Task calendar" hidden>
+          <header class="calendar-toolbar">
+            <div class="calendar-month-controls"><button type="button" class="btn calendar-arrow" id="calendar-previous" aria-label="Previous month">Prev</button><button type="button" class="btn calendar-arrow" id="calendar-next" aria-label="Next month">Next</button><button type="button" class="btn" id="calendar-today">Today</button><h2 id="calendar-month-title"></h2></div>
+            <p class="calendar-filter-note" id="calendar-filter-note"></p>
+          </header>
+          <p class="calendar-state" id="calendar-state" role="status">Loading this month…</p>
+          <p class="calendar-error" id="calendar-error" role="alert" hidden></p>
+          <div class="calendar-weekdays" aria-hidden="true"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+          <div class="calendar-grid" id="calendar-grid" aria-label="Month calendar"></div>
+          <div class="calendar-agenda" id="calendar-agenda" aria-label="Tasks grouped by day" hidden></div>
+        </section>
+        <section class="account-view" id="profile-view" aria-label="Profile" hidden>
+          <div class="account-intro"><p class="eyebrow">ACCOUNT</p><p class="muted">Manage your personal Tasklog account.</p></div>
+          <section class="account-card profile-card">
+            <header class="account-card-heading"><span class="profile-avatar-large" id="profile-avatar">U</span><div><h2>Profile information</h2><p class="muted">Your name is shown across your workspace.</p></div></header>
+            <form id="profile-form" class="account-form">
+              <label>Full name<input name="name" id="profile-name" type="text" maxlength="100" required></label>
+              <label>Email address<input name="email" id="profile-email" type="email" readonly aria-readonly="true"></label>
+              <p class="account-message" id="profile-message" role="status" hidden></p><p class="account-error" id="profile-error" role="alert" hidden></p>
+              <button class="btn primary" type="submit">Save name</button>
+            </form>
+          </section>
+          <section class="account-card">
+            <header class="account-card-heading"><div><h2>Change password</h2><p class="muted">Use your current password to choose a new one.</p></div></header>
+            <form id="password-form" class="account-form">
+              <label>Current password<input name="currentPassword" type="password" autocomplete="current-password" required></label>
+              <label>New password<input name="newPassword" type="password" autocomplete="new-password" minlength="8" required><small>At least 8 characters.</small></label>
+              <p class="account-message" id="password-message" role="status" hidden></p><p class="account-error" id="password-error" role="alert" hidden></p>
+              <button class="btn primary" type="submit">Change password</button>
+            </form>
+          </section>
+          <section class="account-card danger-zone">
+            <header class="account-card-heading"><div><h2>Delete account</h2><p class="muted">This permanently removes your tasks, projects, notes, and uploaded images.</p></div></header>
+            <form id="delete-account-form" class="account-form">
+              <label>Confirm your password<input name="password" type="password" autocomplete="current-password" required></label>
+              <label>Type DELETE to confirm<input name="confirmation" type="text" autocomplete="off" required></label>
+              <p class="account-error" id="delete-account-error" role="alert" hidden></p>
+              <button class="btn danger-button" type="submit">Delete my account</button>
+            </form>
+          </section>
+        </section>
+        <section class="account-view" id="settings-view" aria-label="Settings" hidden>
+          <div class="account-intro"><p class="eyebrow">PREFERENCES</p><p class="muted">Choose how Tasklog behaves for you.</p></div>
+          <section class="account-card">
+            <header class="account-card-heading"><div><h2>Task defaults</h2><p class="muted">These preferences apply to your task board and new tasks.</p></div></header>
+            <form id="settings-form" class="account-form settings-form">
+              <label>Default priority for new tasks<select name="defaultPriority" id="default-priority"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></label>
+              <label class="setting-checkbox"><input name="showCompletedTasks" id="show-completed-tasks" type="checkbox"><span><strong>Show completed tasks on the board</strong><small>Turn this off to keep completed work out of the task columns.</small></span></label>
+              <p class="account-message" id="settings-message" role="status" hidden></p><p class="account-error" id="settings-error" role="alert" hidden></p>
+              <button class="btn primary" type="submit">Save preferences</button>
+            </form>
+          </section>
+          <section class="account-card theme-card">
+            <header class="account-card-heading"><div><h2>Appearance</h2><p class="muted">Use a darker workspace when you prefer it.</p></div></header>
+            <div class="theme-setting"><label class="setting-checkbox" for="dark-mode-toggle"><input id="dark-mode-toggle" type="checkbox"><span><strong>Dark appearance</strong><small>By default, Tasklog follows your device appearance.</small></span></label><button type="button" class="text-button" id="system-theme">Use system preference</button></div>
+          </section>
+        </section>
+      </main>
+    </div>
+    <div class="overlay" id="project-overlay" hidden>
+      <section class="dialog project-dialog" role="dialog" aria-modal="true" aria-labelledby="project-form-title">
+        <header class="dialog-head">
+          <div><p class="eyebrow">PROJECT</p><h2 id="project-form-title">New project</h2></div>
+          <button class="icon-button" type="button" data-close-project aria-label="Close" title="Close dialog">×</button>
+        </header>
+        <form id="project-form">
+          <label>Project name<input name="name" type="text" maxlength="80" required placeholder="e.g. Website redesign"></label>
+          <fieldset class="project-colors"><legend>Color</legend><div class="project-color-options" id="project-color-options" role="radiogroup" aria-label="Project color"></div><input name="color" type="hidden" value="#2563EB"></fieldset>
+          <p class="field-error" id="project-error" role="alert" hidden></p>
+          <footer class="dialog-actions">
+            <button type="button" class="btn" data-close-project>Cancel</button>
+            <button type="submit" class="btn primary" id="project-submit">Create project</button>
+          </footer>
+        </form>
+      </section>
+    </div>
+    <div class="overlay" id="create-overlay" hidden>
+      <section
+        class="dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="form-title"
+      >
+        <header class="dialog-head">
+          <div>
+            <p class="eyebrow">TASK</p>
+            <h2 id="form-title">Create task</h2>
+          </div>
+          <button class="icon-button" data-close-create aria-label="Close" title="Close dialog">
+            ×
+          </button>
+        </header>
+        <form id="task-form">
+          <label
+            >Title <span class="required">*</span
+            ><input
+              name="title"
+              maxlength="160"
+              required
+              placeholder="What needs to get done?"
+          /></label>
+          <p class="field-error" id="title-error" hidden>
+            Please enter a task title.
+          </p>
+          <label
+            >Description
+            <textarea
+              name="description"
+              rows="3"
+              placeholder="Add a little more detail..."
+            ></textarea>
+          </label>
+          <label>Project<select name="projectId" id="task-project"></select></label>
+          <div class="form-row">
+            <label
+              >Priority<select name="priority">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+              </select></label
+            ><label>Due date<input type="date" name="dueDate" /></label>
+          </div>
+          <section class="steps-editor">
+            <div class="section-heading">
+              <h3>Steps</h3>
+              <span class="muted">Optional</span>
+            </div>
+            <div id="step-inputs"></div>
+            <button type="button" class="text-button" id="add-step">
+              + Add a step
+            </button>
+            <div class="ai-box">
+              <div>
+                <strong>Need a starting point?</strong>
+                <p>Get a few ideas to help break this task down.</p>
+              </div>
+              <button type="button" class="btn secondary" id="suggest-steps">
+                Suggest steps with AI
+              </button>
+              <div id="suggestions" class="suggestions" hidden></div>
+            </div>
+          </section>
+          <footer class="dialog-actions">
+            <button type="button" class="btn" data-close-create>Cancel</button
+            ><button type="submit" class="btn primary">Create task</button>
+          </footer>
+        </form>
+      </section>
+    </div>
+    <aside
+      class="details-panel"
+      id="details-panel"
+      aria-label="Task details"
+      aria-hidden="true"
+    >
+      <header class="details-top">
+        <span class="eyebrow">TASK DETAILS</span
+        ><button
+          class="icon-button"
+          id="close-details"
+          aria-label="Close details" title="Close details"
+        >
+          ×
+        </button>
+      </header>
+      <div id="details-content"></div>
+    </aside>
+    <div class="panel-backdrop" id="panel-backdrop" hidden></div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="image-viewer" id="image-viewer" hidden>
+      <button class="icon-button" aria-label="Close image" title="Close image">×</button
+      ><img alt="Attachment preview" />
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>

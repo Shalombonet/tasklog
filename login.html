@@ -1,0 +1,27 @@
+<!-- This page lets an existing Tasklog user sign in. -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Log in · Tasklog</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <script src="app.js" defer></script>
+</head>
+<body class="auth">
+  <main class="auth-card">
+    <div class="auth-brand"><span class="brand-mark">T</span><span>Tasklog</span></div>
+    <h1>Welcome back</h1>
+    <p class="muted">Log in to pick up where you left off.</p>
+    <form id="auth-form" data-auth-mode="login">
+      <label>Email<input name="email" type="email" autocomplete="email" placeholder="you@example.com" required></label>
+      <label>Password<span class="password-input-wrap"><input id="login-password" name="password" type="password" autocomplete="current-password" maxlength="16" required><button class="password-toggle" type="button" data-password-toggle="login-password" aria-label="Show password" aria-pressed="false">Show</button></span></label>
+      <p class="auth-error" id="auth-error" role="alert" hidden></p>
+      <button class="btn primary" type="submit">Log in</button>
+    </form>
+    <p class="muted auth-switch">No account yet? <a href="register.html">Create one</a></p>
+  </main>
+</body>
+</html>
