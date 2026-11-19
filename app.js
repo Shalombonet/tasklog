@@ -23,6 +23,7 @@ let pendingAttachmentNoteId = null;
 let noteFileSelectionId = 0;
 let createSuggestions = [];
 let detailSuggestions = [];
+let sidebarReturnFocus = null;
 
 // API DATA ACCESS — keep all fetch calls and endpoint details in this section.
 async function apiRequest(url, options) {
@@ -59,7 +60,6 @@ const api = {
   },
   getStatsSummary: function () { return apiRequest("/api/stats/summary"); },
   getStatsActivity: function (days) { return apiRequest("/api/stats/activity?days=" + encodeURIComponent(days)); },
-  getStatsStreak: function () { return apiRequest("/api/stats/streak"); },
   listProjects: function () { return apiRequest("/api/projects"); },
   createProject: function (body) { return apiRequest("/api/projects", { method: "POST", body: body }); },
   updateProject: function (id, body) { return apiRequest("/api/projects/" + id, { method: "PATCH", body: body }); },
@@ -131,7 +131,7 @@ function renderProjectList() {
   const list = document.getElementById("project-list");
   if (!list) return;
   list.innerHTML = projects.length ? projects.map(function (project) {
-    return '<div class="project-item" data-project-row="' + project.id + '"><button type="button" class="project-select' + (String(activeProjectId) === String(project.id) ? " selected" : "") + '" data-project-select="' + project.id + '"><span class="project-dot" style="background-color:' + escapeHtml(project.color) + '"></span><span class="project-name">' + escapeHtml(project.name) + '</span><span class="project-count">' + project.taskCount + '</span></button><div class="project-menu-wrap"><button type="button" class="project-menu-trigger" data-project-menu="' + project.id + '" aria-label="Project options for ' + escapeHtml(project.name) + '" title="Project options">⋯</button><div class="project-menu" data-project-dropdown="' + project.id + '" hidden><button type="button" data-project-action="rename" data-id="' + project.id + '">Rename project</button><button type="button" class="project-delete" data-project-action="delete" data-id="' + project.id + '">Delete project</button></div></div></div>';
+    return '<div class="project-item" data-project-row="' + project.id + '"><button type="button" class="project-select' + (String(activeProjectId) === String(project.id) ? " selected" : "") + '" data-project-select="' + project.id + '"><span class="project-dot" style="background-color:' + escapeHtml(project.color) + '"></span><span class="project-name">' + escapeHtml(project.name) + '</span><span class="project-count">' + project.taskCount + '</span></button><div class="project-menu-wrap"><button type="button" class="project-menu-trigger" data-project-menu="' + project.id + '" aria-label="Project options for ' + escapeHtml(project.name) + '" aria-expanded="false" title="Project options">⋯</button><div class="project-menu" data-project-dropdown="' + project.id + '" hidden><button type="button" data-project-action="rename" data-id="' + project.id + '">Rename project</button><button type="button" class="project-delete" data-project-action="delete" data-id="' + project.id + '">Delete project</button></div></div></div>';
   }).join("") : '<p class="project-empty">No projects yet</p>';
 }
 
@@ -267,19 +267,84 @@ async function restoreNavigationFromHash() {
   if (currentView !== "board" || activeProjectId != null) await navigateToProject(null, false);
 }
 
-// Opens or closes the sidebar drawer and updates its accessibility state.
+// Opens or closes the small-screen navigation drawer and manages its focus.
 function setSidebarDrawerOpen(isOpen) {
   const sidebar = document.getElementById("sidebar");
   const toggle = document.getElementById("sidebar-toggle");
+  const wasOpen = toggle.getAttribute("aria-expanded") === "true";
+  const isSmallScreen = window.matchMedia("(max-width: 767px)").matches;
+  if (isOpen) setMobileSearchOpen(false);
+  if (isOpen && isSmallScreen && !wasOpen) sidebarReturnFocus = document.activeElement;
   sidebar.classList.toggle("open", isOpen);
   document.getElementById("sidebar-backdrop").hidden = !isOpen;
   toggle.setAttribute("aria-expanded", String(isOpen));
   toggle.setAttribute("aria-label", isOpen ? "Close navigation" : "Open navigation");
+  sidebar.inert = isSmallScreen && !isOpen;
+  sidebar.setAttribute("aria-hidden", String(isSmallScreen && !isOpen));
+  if (isOpen && isSmallScreen) {
+    const firstLink = sidebar.querySelector("a[href], button:not([disabled])");
+    if (firstLink) firstLink.focus();
+  } else if (!isOpen && wasOpen && sidebarReturnFocus && sidebarReturnFocus.isConnected) {
+    sidebarReturnFocus.focus();
+    sidebarReturnFocus = null;
+  }
 }
 
 // Closes the mobile sidebar drawer.
 function closeSidebarDrawer() {
   setSidebarDrawerOpen(false);
+}
+
+// Expands the search field as an overlay on narrow screens.
+function setMobileSearchOpen(isOpen) {
+  const searchWrap = document.getElementById("search-wrap");
+  const searchButton = document.getElementById("search-toggle");
+  const searchInput = document.getElementById("search");
+  const isSmallScreen = window.matchMedia("(max-width: 767px)").matches;
+  if (!isSmallScreen && isOpen) return;
+  const wasOpen = searchWrap.classList.contains("is-open");
+  searchWrap.classList.toggle("is-open", isOpen);
+  searchButton.setAttribute("aria-expanded", String(isOpen));
+  searchButton.setAttribute("aria-label", isOpen ? "Close search" : "Open search");
+  if (isOpen) searchInput.focus();
+  else {
+    searchInput.blur();
+    if (wasOpen && isSmallScreen) searchButton.focus();
+  }
+}
+
+// Traps keyboard focus inside the open navigation drawer.
+function keepFocusInSidebar(event) {
+  const toggle = document.getElementById("sidebar-toggle");
+  if (toggle.getAttribute("aria-expanded") !== "true") return;
+  const sidebar = document.getElementById("sidebar");
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeSidebarDrawer();
+    return;
+  }
+  if (event.key !== "Tab") return;
+  const focusableItems = Array.from(sidebar.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter(function (item) {
+    return item.getClientRects().length > 0 && !item.closest("[hidden]");
+  });
+  if (!focusableItems.length) return;
+  const firstItem = focusableItems[0];
+  const lastItem = focusableItems[focusableItems.length - 1];
+  if (event.shiftKey && (document.activeElement === firstItem || !sidebar.contains(document.activeElement))) {
+    event.preventDefault();
+    lastItem.focus();
+  } else if (!event.shiftKey && (document.activeElement === lastItem || !sidebar.contains(document.activeElement))) {
+    event.preventDefault();
+    firstItem.focus();
+  }
+}
+
+// Keeps the main workspace from scrolling behind an open sheet or dialog.
+function updateAppScrollLock() {
+  const app = document.getElementById("app-shell");
+  if (!app) return;
+  const hasOpenLayer = !createOverlay.hidden || !projectOverlay.hidden || detailsPanel.classList.contains("open") || !document.getElementById("image-viewer").hidden;
+  app.classList.toggle("has-open-layer", hasOpenLayer);
 }
 
 // Finds a task in the active view or the full list used by the calendar and reports.
@@ -305,10 +370,13 @@ function cardStepsHtml(task) {
 function createCard(task) {
   const action = task.status === "pending" ? ["start", "Start task"] : task.status === "in_progress" ? ["done", "Mark complete"] : ["reopen", "Reopen task"];
   const description = task.description || "No description";
+  const moveOptions = statuses.filter(function (status) { return status !== task.status; }).map(function (status) {
+    return '<button type="button" data-action="move-to" data-status="' + status + '" data-id="' + task.id + '">' + escapeHtml(statusLabels[status]) + '</button>';
+  }).join("");
   const projectTag = activeProjectId == null && task.projectId != null
     ? '<span class="project-tag"><i style="background-color:' + escapeHtml(task.projectColor) + '"></i>' + escapeHtml(task.projectName) + '</span>'
     : "";
-  return '<article class="card priority-' + task.priority + '" draggable="true" data-card-id="' + task.id + '" tabindex="0"><div class="card-top"><div class="card-labels"><span class="tag ' + task.priority + '">' + priorityLabels[task.priority] + '</span>' + projectTag + '</div><div class="menu-wrap"><button class="menu-trigger" data-menu="' + task.id + '" aria-label="Task menu">⋯</button><div class="dropdown" data-dropdown="' + task.id + '" hidden><button data-action="open" data-id="' + task.id + '">Open details</button><button data-action="edit" data-id="' + task.id + '">Edit</button><button data-action="' + action[0] + '" data-id="' + task.id + '">' + action[1] + '</button><button class="delete-action" data-action="delete" data-id="' + task.id + '">Delete</button></div></div></div><h3>' + escapeHtml(task.title) + '</h3><p class="card-description">' + escapeHtml(description) + '</p>' + cardStepsHtml(task) + '<div class="card-meta"><span>' + task.steps.filter(function (s) { return s.done; }).length + '/' + task.steps.length + ' steps</span><time class="' + (isOverdue(task) ? "overdue" : "") + '">' + escapeHtml(formatDate(task.dueDate)) + '</time></div></article>';
+  return '<article class="card priority-' + task.priority + '" draggable="true" data-card-id="' + task.id + '" tabindex="0"><div class="card-top"><div class="card-labels"><span class="tag ' + task.priority + '">' + priorityLabels[task.priority] + '</span>' + projectTag + '</div><div class="menu-wrap"><button class="menu-trigger" data-menu="' + task.id + '" aria-label="Task menu" aria-expanded="false">⋯</button><div class="dropdown" data-dropdown="' + task.id + '" hidden><button type="button" data-action="open" data-id="' + task.id + '">Open details</button><button type="button" data-action="edit" data-id="' + task.id + '">Edit</button><button type="button" data-action="' + action[0] + '" data-id="' + task.id + '">' + action[1] + '</button><div class="move-options"><span>Move to</span>' + moveOptions + '</div><button type="button" class="delete-action" data-action="delete" data-id="' + task.id + '">Delete</button></div></div></div><h3>' + escapeHtml(task.title) + '</h3><p class="card-description">' + escapeHtml(description) + '</p>' + cardStepsHtml(task) + '<div class="card-meta"><span>' + task.steps.filter(function (s) { return s.done; }).length + '/' + task.steps.length + ' steps</span><time class="' + (isOverdue(task) ? "overdue" : "") + '">' + escapeHtml(formatDate(task.dueDate)) + '</time></div></article>';
 }
 function renderBoard() {
   const visible = getVisibleTasks();
@@ -471,11 +539,10 @@ function renderDashboard() {
   }).join("") : '<p class="muted dashboard-empty">No upcoming tasks. Add a due date to a task to see it here.</p>';
 }
 
-// Loads the dashboard summary, chart data, and streak independently.
+// Loads the dashboard summary and activity chart independently.
 function loadDashboardStats() {
   loadDashboardSummary();
   loadDashboardActivity();
-  loadDashboardStreak();
 }
 
 // Loads task totals and updates the dashboard cards and completion ring.
@@ -572,28 +639,6 @@ function buildDashboardActivitySvg(days) {
     return '<g><title>' + escapeHtml(title) + '</title>' + segments + '<text x="' + (x + 18) + '" y="164" text-anchor="middle">' + escapeHtml(dateLabel) + '</text></g>';
   }).join("");
   return '<svg class="dashboard-activity-chart" viewBox="0 0 720 178" role="img" aria-label="Activity during the last 14 days"><line x1="30" y1="' + chartBottom + '" x2="710" y2="' + chartBottom + '" stroke="#e7e9ee"></line>' + bars + '</svg>';
-}
-
-// Loads the current completion streak and shows a friendly zero-data message.
-async function loadDashboardStreak() {
-  const state = document.getElementById("streak-state");
-  const error = document.getElementById("streak-error");
-  state.hidden = false;
-  state.textContent = "Loading your streak…";
-  error.hidden = true;
-  try {
-    const result = await api.getStatsStreak();
-    const streak = result.streak;
-    const days = Number(streak.currentStreak) || 0;
-    document.getElementById("streak-days").textContent = days;
-    document.getElementById("streak-note").textContent = days ? "Last active " + formatDate(streak.lastActiveDate) : "Complete a task or step today to start a streak.";
-    state.hidden = true;
-  } catch (requestError) {
-    document.getElementById("streak-days").textContent = "—";
-    state.hidden = true;
-    error.textContent = "Could not load your streak. " + (requestError.message || "Please try again.");
-    error.hidden = false;
-  }
 }
 
 // Loads each report section separately so one failed request does not hide the others.
@@ -1007,6 +1052,7 @@ function openProjectForm(project) {
   document.getElementById("project-error").hidden = true;
   renderProjectColorOptions(project ? project.color : projectColors[0]);
   projectOverlay.hidden = false;
+  updateAppScrollLock();
   projectForm.elements.name.focus();
 }
 
@@ -1014,6 +1060,7 @@ function openProjectForm(project) {
 function closeProjectForm() {
   projectOverlay.hidden = true;
   editingProjectId = null;
+  updateAppScrollLock();
 }
 
 // Saves the new or renamed project and reloads the sidebar counts.
@@ -1110,7 +1157,7 @@ function openCreateForm(defaultDueDate) {
   renderTaskProjectOptions(activeProjectId === "inbox" ? null : activeProjectId);
   taskForm.querySelector('[type="submit"]').textContent = "Create task";
   document.getElementById("step-inputs").innerHTML = ""; document.getElementById("title-error").hidden = true;
-  createSuggestions = []; document.getElementById("suggestions").hidden = true; addStepInput("", "user"); createOverlay.hidden = false; taskForm.elements.title.focus();
+  createSuggestions = []; document.getElementById("suggestions").hidden = true; addStepInput("", "user"); createOverlay.hidden = false; updateAppScrollLock(); taskForm.elements.title.focus();
 }
 function openEditForm(id) {
   const task = findTask(id); if (!task) return;
@@ -1121,9 +1168,10 @@ function openEditForm(id) {
   taskForm.elements.priority.value = task.priority; taskForm.elements.dueDate.value = task.dueDate ? String(task.dueDate).slice(0, 10) : "";
   renderTaskProjectOptions(task.projectId);
   document.getElementById("step-inputs").innerHTML = ""; task.steps.forEach(function (s) { addStepInput(s.text, s.source); });
-  if (!task.steps.length) addStepInput("", "user"); createOverlay.hidden = false;
+  if (!task.steps.length) addStepInput("", "user"); createOverlay.hidden = false; updateAppScrollLock();
 }
-function closeCreateForm() { createOverlay.hidden = true; editingId = null; taskForm.reset(); }
+// Closes the task form and releases the page scroll lock.
+function closeCreateForm() { createOverlay.hidden = true; editingId = null; taskForm.reset(); updateAppScrollLock(); }
 // Clears selected image previews and any retry state when leaving a task note form.
 function clearPendingNoteImages() {
   noteFileSelectionId += 1;
@@ -1163,6 +1211,7 @@ function openDetails(id) {
   detailsPanel.classList.add("open");
   detailsPanel.setAttribute("aria-hidden", "false");
   document.getElementById("panel-backdrop").hidden = false;
+  updateAppScrollLock();
 }
 
 // Closes the task details panel and clears any unsaved image selections.
@@ -1173,6 +1222,7 @@ function closeDetails() {
   activeTaskId = null;
   detailSuggestions = [];
   clearPendingNoteImages();
+  updateAppScrollLock();
 }
 
 // Renders task details, note attachments, and the existing activity history.
@@ -1289,6 +1339,7 @@ const authForm = document.getElementById("auth-form");
 if (authForm) {
   initializeAuthPage(authForm);
 } else if (document.getElementById("app-shell")) {
+  setSidebarDrawerOpen(false);
   // Signs out through the existing session endpoint and returns to the login page.
   async function logOut(event) {
     event.preventDefault();
@@ -1350,7 +1401,9 @@ if (authForm) {
       const menu = document.querySelector('[data-project-dropdown="' + CSS.escape(menuButton.dataset.projectMenu) + '"]');
       const shouldOpen = menu.hidden;
       document.querySelectorAll(".project-menu").forEach(function (item) { item.hidden = true; });
+      document.querySelectorAll("[data-project-menu]").forEach(function (button) { button.setAttribute("aria-expanded", "false"); });
       menu.hidden = !shouldOpen;
+      menuButton.setAttribute("aria-expanded", String(shouldOpen));
       event.stopPropagation();
       return;
     }
@@ -1358,6 +1411,7 @@ if (authForm) {
     if (!actionButton) return;
     const project = projects.find(function (item) { return String(item.id) === actionButton.dataset.id; });
     document.querySelectorAll(".project-menu").forEach(function (item) { item.hidden = true; });
+    document.querySelectorAll("[data-project-menu]").forEach(function (button) { button.setAttribute("aria-expanded", "false"); });
     if (!project) return;
     if (actionButton.dataset.projectAction === "rename") {
       openProjectForm(project);
@@ -1462,6 +1516,20 @@ if (authForm) {
     setSidebarDrawerOpen(!isOpen);
   });
   document.getElementById("sidebar-backdrop").addEventListener("click", closeSidebarDrawer);
+  document.addEventListener("keydown", keepFocusInSidebar, true);
+  window.addEventListener("resize", function () {
+    closeSidebarDrawer();
+    if (!window.matchMedia("(max-width: 767px)").matches) setMobileSearchOpen(false);
+  });
+  document.getElementById("search-toggle").addEventListener("click", function () {
+    const searchInput = document.getElementById("search");
+    setMobileSearchOpen(!document.getElementById("search-wrap").classList.contains("is-open"));
+    if (document.getElementById("search-wrap").classList.contains("is-open")) searchInput.focus();
+  });
+  document.addEventListener("click", function (event) {
+    const searchWrap = document.getElementById("search-wrap");
+    if (searchWrap.classList.contains("is-open") && !searchWrap.contains(event.target)) setMobileSearchOpen(false);
+  });
   window.addEventListener("hashchange", restoreNavigationFromHash);
   document.getElementById("due-soon-list").addEventListener("click", function (event) { const b = event.target.closest("[data-dashboard-task]"); if (b) openDetails(b.dataset.dashboardTask); });
   document.getElementById("search").addEventListener("input", function () { renderBoard(); if (currentView === "calendar") loadCalendarTasks(); });
@@ -1472,12 +1540,16 @@ if (authForm) {
     const trigger = event.target.closest("[data-menu]");
     if (trigger) {
       const menu = document.querySelector('[data-dropdown="' + CSS.escape(trigger.dataset.menu) + '"]');
-      const open = menu.hidden; document.querySelectorAll(".dropdown").forEach(function (d) { d.hidden = true; }); menu.hidden = !open; event.stopPropagation(); return;
+      const open = menu.hidden; document.querySelectorAll(".dropdown").forEach(function (d) { d.hidden = true; });
+      document.querySelectorAll("[data-menu]").forEach(function (button) { button.setAttribute("aria-expanded", "false"); });
+      menu.hidden = !open; trigger.setAttribute("aria-expanded", String(open)); event.stopPropagation(); return;
     }
     const button = event.target.closest("[data-action]");
     if (button) {
       const id = button.dataset.id; const task = findTask(id); const action = button.dataset.action;
-      document.querySelectorAll(".dropdown").forEach(function (d) { d.hidden = true; }); if (!task) return;
+      document.querySelectorAll(".dropdown").forEach(function (d) { d.hidden = true; });
+      document.querySelectorAll("[data-menu]").forEach(function (menuButton) { menuButton.setAttribute("aria-expanded", "false"); });
+      if (!task) return;
       if (action === "open") return openDetails(id);
       if (action === "edit") return openEditForm(id);
       if (action === "delete" && !window.confirm("Delete this task? This cannot be undone.")) return;
@@ -1490,6 +1562,14 @@ if (authForm) {
           await api.updateTask(id, { status: "completed" });
           for (const step of task.steps) if (!step.done) await api.updateStep(id, step.id, { done: true });
           showToast("Task completed");
+        }
+        if (action === "move-to") {
+          const newStatus = button.dataset.status;
+          await api.updateTask(id, { status: newStatus });
+          if (newStatus === "completed") {
+            for (const step of task.steps) if (!step.done) await api.updateStep(id, step.id, { done: true });
+          }
+          showToast("Task moved to " + statusLabels[newStatus]);
         }
         await refreshTasks();
       } catch (error) { reportError(error); await refreshTasks().catch(function () {}); }
@@ -1569,6 +1649,7 @@ if (authForm) {
       const viewer = document.getElementById("image-viewer");
       viewer.querySelector("img").src = image.dataset.image;
       viewer.hidden = false;
+      updateAppScrollLock();
     }
   });
   detailsPanel.addEventListener("submit", async function (event) {
@@ -1629,22 +1710,30 @@ if (authForm) {
   document.getElementById("close-details").addEventListener("click", closeDetails);
   document.getElementById("panel-backdrop").addEventListener("click", closeDetails);
   document.addEventListener("click", function (event) {
-    if (!event.target.closest(".menu-wrap")) document.querySelectorAll(".dropdown").forEach(function (d) { d.hidden = true; });
-    if (!event.target.closest(".project-menu-wrap")) document.querySelectorAll(".project-menu").forEach(function (menu) { menu.hidden = true; });
+    if (!event.target.closest(".menu-wrap")) {
+      document.querySelectorAll(".dropdown").forEach(function (d) { d.hidden = true; });
+      document.querySelectorAll("[data-menu]").forEach(function (button) { button.setAttribute("aria-expanded", "false"); });
+    }
+    if (!event.target.closest(".project-menu-wrap")) {
+      document.querySelectorAll(".project-menu").forEach(function (menu) { menu.hidden = true; });
+      document.querySelectorAll("[data-project-menu]").forEach(function (button) { button.setAttribute("aria-expanded", "false"); });
+    }
   });
   document.addEventListener("keydown", function (event) {
     if (event.key !== "Escape") return;
+    if (document.getElementById("search-wrap").classList.contains("is-open")) setMobileSearchOpen(false);
     const viewer = document.getElementById("image-viewer");
-    if (!viewer.hidden) { viewer.hidden = true; return; }
+    if (!viewer.hidden) { viewer.hidden = true; updateAppScrollLock(); return; }
     document.querySelectorAll(".dropdown").forEach(function (d) { d.hidden = true; });
     document.querySelectorAll(".project-menu").forEach(function (menu) { menu.hidden = true; });
+    document.querySelectorAll("[data-project-menu]").forEach(function (button) { button.setAttribute("aria-expanded", "false"); });
     closeSidebarDrawer();
     if (!projectOverlay.hidden) closeProjectForm();
     if (!createOverlay.hidden) closeCreateForm();
     if (activeTaskId != null) closeDetails();
   });
   document.getElementById("image-viewer").addEventListener("click", function (event) {
-    if (event.target === this || event.target.closest("button")) this.hidden = true;
+    if (event.target === this || event.target.closest("button")) { this.hidden = true; updateAppScrollLock(); }
   });
   board.addEventListener("dragstart", function (event) { const card = event.target.closest(".card"); if (!card) return; event.dataTransfer.setData("text/plain", card.dataset.cardId); event.dataTransfer.effectAllowed = "move"; });
   board.querySelectorAll(".column").forEach(function (column) {

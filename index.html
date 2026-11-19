@@ -18,9 +18,10 @@
       <header class="app-header">
         <button type="button" class="mobile-menu-button" id="sidebar-toggle" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false">Menu</button>
         <a class="brand" href="#board" aria-label="Tasklog home">Tasklog</a>
-        <label class="search-wrap">
+        <div class="search-wrap" id="search-wrap">
+          <button type="button" class="search-toggle" id="search-toggle" aria-label="Open search" aria-expanded="false" aria-controls="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"></circle><path d="m16 16 4.5 4.5"></path></svg></button>
           <input type="search" id="search" placeholder="Search tasks" aria-label="Search tasks" />
-        </label>
+        </div>
         <div class="app-header-actions">
           <div class="notification-wrap" id="notification-wrap">
             <button type="button" class="notification-button" id="notification-toggle" aria-label="Notifications" title="Notifications" aria-expanded="false" aria-controls="notification-menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg><span class="notification-badge" id="notification-count" hidden>0</span></button>
@@ -47,13 +48,13 @@
       <aside class="sidebar" id="sidebar">
         <nav class="sidebar-nav" aria-label="Main navigation">
           <p class="sidebar-label">Menu</p>
-          <a href="#board" class="nav-link active" data-view="board"><span>My tasks</span><span class="nav-badge" id="open-task-count">0</span></a>
-          <a href="#dashboard" class="nav-link" data-view="dashboard"><span>Dashboard</span></a>
-          <a href="#reports" class="nav-link" data-view="reports"><span>Reports</span></a>
-          <a href="#calendar" class="nav-link" data-view="calendar"><span>Calendar</span></a>
-          <a href="#settings" class="nav-link" data-view="settings"><span>Settings</span></a>
+          <a href="#board" class="nav-link active" data-view="board" data-short="MT" title="My tasks"><span>My tasks</span><span class="nav-badge" id="open-task-count">0</span></a>
+          <a href="#dashboard" class="nav-link" data-view="dashboard" data-short="D" title="Dashboard"><span>Dashboard</span></a>
+          <a href="#reports" class="nav-link" data-view="reports" data-short="R" title="Reports"><span>Reports</span></a>
+          <a href="#calendar" class="nav-link" data-view="calendar" data-short="C" title="Calendar"><span>Calendar</span></a>
+          <a href="#settings" class="nav-link" data-view="settings" data-short="S" title="Settings"><span>Settings</span></a>
           <div class="sidebar-section-head"><p class="sidebar-label">Projects</p><button type="button" class="sidebar-add" id="new-project" aria-label="Create a project" title="New project">+</button></div>
-          <button type="button" class="project-select inbox-select" data-project-select="inbox"><span class="project-dot inbox-dot"></span><span class="project-name">Inbox</span><span class="project-count" id="inbox-task-count">0</span></button>
+          <button type="button" class="project-select inbox-select" data-project-select="inbox" title="Inbox"><span class="project-dot inbox-dot"></span><span class="project-name">Inbox</span><span class="project-count" id="inbox-task-count">0</span></button>
           <div class="project-list" id="project-list"></div>
           <button class="new-project-link" id="new-project-link" type="button"><span>＋</span> New project</button>
         </nav>
@@ -162,35 +163,28 @@
             <article class="dashboard-highlight"><span>Completed this week</span><strong id="stat-completed-week">—</strong><small>Tasks finished this week</small></article>
           </div>
           <div class="dashboard-grid dashboard-main-grid">
-            <section class="dashboard-card dashboard-activity-card">
-              <header><div><h3>Activity</h3><span>Last 14 days</span></div>
-                <div class="activity-legend" aria-label="Activity legend"><span><i class="legend-steps"></i>Steps</span><span><i class="legend-tasks"></i>Tasks</span><span><i class="legend-notes"></i>Notes</span></div>
-              </header>
-              <p class="dashboard-request-state" id="activity-state" role="status">Loading activity…</p>
-              <p class="dashboard-error" id="activity-error" role="alert" hidden></p>
-              <p class="dashboard-empty" id="activity-empty" hidden>No activity yet. Complete a step to see your activity.</p>
-              <div class="activity-chart-wrap" id="activity-chart-wrap" hidden></div>
+            <section class="dashboard-card due-soon-card">
+              <header><div><h3>Due soon</h3><span>Next 5 tasks by due date</span></div></header>
+              <div id="due-soon-list" class="dashboard-task-list"></div>
             </section>
-            <details class="dashboard-more-insights"><summary>More insights <span>Completion rate and streak</span></summary><div class="dashboard-side-grid">
+            <details class="dashboard-more-insights"><summary>More insights <span>Completion rate and activity</span></summary><div class="dashboard-side-grid">
               <section class="dashboard-card completion-card">
                 <header><div><h3>Completion rate</h3><span>Completed tasks</span></div></header>
                 <p class="dashboard-error" id="completion-error" role="alert" hidden></p>
                 <div class="completion-ring" id="completion-ring" role="img" aria-label="Completion rate loading"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="completion-track" cx="60" cy="60" r="49"></circle><circle class="completion-progress" id="completion-progress" cx="60" cy="60" r="49"></circle></svg><span id="completion-rate">—</span></div>
                 <p class="dashboard-request-state" id="completion-note" role="status">Loading completion rate…</p>
               </section>
-              <section class="dashboard-card streak-card">
-                <header><div><h3>Current streak</h3><span>Consecutive active days</span></div></header>
-                <p class="dashboard-request-state" id="streak-state" role="status">Loading your streak…</p>
-                <p class="dashboard-error" id="streak-error" role="alert" hidden></p>
-                <p class="streak-value"><strong id="streak-days">—</strong><span>days</span></p>
-                <p class="muted" id="streak-note">Complete a task or step to build a streak.</p>
+              <section class="dashboard-card dashboard-activity-card">
+                <header><div><h3>Activity</h3><span>Last 14 days</span></div>
+                  <div class="activity-legend" aria-label="Activity legend"><span><i class="legend-steps"></i>Steps</span><span><i class="legend-tasks"></i>Tasks</span><span><i class="legend-notes"></i>Notes</span></div>
+                </header>
+                <p class="dashboard-request-state" id="activity-state" role="status">Loading activity…</p>
+                <p class="dashboard-error" id="activity-error" role="alert" hidden></p>
+                <p class="dashboard-empty" id="activity-empty" hidden>No activity yet. Complete a step to see your activity.</p>
+                <div class="activity-chart-wrap" id="activity-chart-wrap" hidden></div>
               </section>
             </div>
             </details>
-            <section class="dashboard-card due-soon-card">
-              <header><div><h3>Due soon</h3><span>Next 5 tasks by due date</span></div></header>
-              <div id="due-soon-list" class="dashboard-task-list"></div>
-            </section>
           </div>
         </section>
         <section class="reports-view" id="reports-view" aria-label="Task reports" hidden>
@@ -200,8 +194,8 @@
             <p class="report-state" id="report-activity-state" role="status">Loading activity…</p><p class="report-error" id="report-activity-error" role="alert" hidden></p><p class="report-empty" id="report-activity-empty" hidden>No activity in this date range yet.</p><div class="report-chart-wrap" id="report-activity-chart" hidden></div>
           </section>
           <div class="reports-grid">
-            <section class="report-card"><header class="report-card-heading"><div><h2>By project</h2><p class="muted">Tasks completed and still open.</p></div></header><p class="report-state" id="report-project-state" role="status">Loading projects…</p><p class="report-error" id="report-project-error" role="alert" hidden></p><table class="data-table report-table"><thead><tr><th>Project</th><th>Completed</th><th>Open</th></tr></thead><tbody id="report-project-list" hidden></tbody></table></section>
-            <section class="report-card"><header class="report-card-heading"><div><h2>Proof of work</h2><p class="muted">Completed steps and notes, newest first.</p></div></header><p class="report-state" id="report-proof-state" role="status">Loading your work history…</p><p class="report-error" id="report-proof-error" role="alert" hidden></p><p class="report-empty" id="report-proof-empty" hidden>No completed steps or notes yet.</p><table class="data-table report-table"><thead><tr><th>Work item</th><th>Task</th><th>Type</th><th>When</th></tr></thead><tbody id="report-proof-list" hidden></tbody></table></section>
+            <section class="report-card"><header class="report-card-heading"><div><h2>By project</h2><p class="muted">Tasks completed and still open.</p></div></header><p class="report-state" id="report-project-state" role="status">Loading projects…</p><p class="report-error" id="report-project-error" role="alert" hidden></p><div class="table-scroll" role="region" aria-label="Project task breakdown" tabindex="0"><table class="data-table report-table"><thead><tr><th>Project</th><th>Completed</th><th>Open</th></tr></thead><tbody id="report-project-list" hidden></tbody></table></div></section>
+            <section class="report-card"><header class="report-card-heading"><div><h2>Proof of work</h2><p class="muted">Completed steps and notes, newest first.</p></div></header><p class="report-state" id="report-proof-state" role="status">Loading your work history…</p><p class="report-error" id="report-proof-error" role="alert" hidden></p><p class="report-empty" id="report-proof-empty" hidden>No completed steps or notes yet.</p><div class="table-scroll" role="region" aria-label="Completed work and notes" tabindex="0"><table class="data-table report-table"><thead><tr><th>Work item</th><th>Task</th><th>Type</th><th>When</th></tr></thead><tbody id="report-proof-list" hidden></tbody></table></div></section>
           </div>
         </section>
         <section class="calendar-view" id="calendar-view" aria-label="Task calendar" hidden>
@@ -282,7 +276,7 @@
     </div>
     <div class="overlay" id="create-overlay" hidden>
       <section
-        class="dialog"
+        class="dialog task-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="form-title"
