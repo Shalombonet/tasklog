@@ -8,6 +8,14 @@ function createPool() {
     throw new Error("DATABASE_URL is missing. Add it to backend/.env before connecting.");
   }
 
+  if (process.env.NODE_ENV === "production") {
+    const databaseUrl = new URL(process.env.DATABASE_URL);
+    if (databaseUrl.searchParams.get("sslmode") !== "require") {
+      throw new Error("Production DATABASE_URL must include ?sslmode=require for an encrypted database connection.");
+    }
+  }
+
+  // node-postgres reads sslmode=require from the URL and opens a verified TLS connection.
   return new Pool({ connectionString: process.env.DATABASE_URL });
 }
 

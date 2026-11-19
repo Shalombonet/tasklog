@@ -1,9 +1,9 @@
-// This file adds one reusable demo account and sample Tasklog work to a development database.
+// This file adds demo account data only after an explicit ALLOW_SEED opt-in.
 require("dotenv").config();
 
-// Stops before opening a database connection when this command targets production.
-if (process.env.NODE_ENV === "production") {
-  console.error("The demo seed is disabled in production.");
+// Requires a temporary, explicit opt-in before any database can be seeded.
+if (process.env.ALLOW_SEED !== "true") {
+  console.error("Seeding is disabled. Set ALLOW_SEED=true temporarily to allow this run.");
   process.exitCode = 1;
 } else {
   const bcrypt = require("bcrypt");

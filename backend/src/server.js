@@ -7,7 +7,7 @@ function startServer() {
   const port = Number(process.env.PORT) || 3000;
 
   app.listen(port, function () {
-    console.info("Tasklog server is running at http://localhost:" + port);
+    console.info("Tasklog server is listening on port " + port);
   });
 }
 
